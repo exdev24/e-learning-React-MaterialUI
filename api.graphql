@@ -1,0 +1,395 @@
+scalar Date
+scalar DateTime
+
+enum Gender {
+  male
+  female
+  other
+}
+
+enum PromoType {
+  PercentOff
+  AmountOff
+  GiftPass
+}
+
+type Promotion {
+  id: ID!
+  code: String!
+  type: PromoType!
+  amount: Float
+  amountInPackage: Float
+  description: String
+}
+
+type Seat {
+  id: ID!
+  class: Class!
+  idx: Int!
+  startDate: DateTime!
+  endDate: DateTime!
+  added: Boolean
+  attended: Boolean
+}
+
+type Registration {
+  id: ID!
+  class: Class!
+  seats: [Seat]!
+}
+
+type Project {
+  id: ID!
+  published: Boolean
+  url: String!
+  preview: String!
+  title: String!
+  description: String!
+  student: Student
+  subject: Subject
+}
+
+type Enrollment {
+  id: ID!
+  class: Class
+  studentId: ID
+  student: Student
+}
+
+type Credit {
+  id: ID!
+  userId: ID
+  user: User
+  reason: String
+  cents: Int
+  createdAt: DateTime
+}
+
+type Session {
+  id: ID!
+  idx: Int!
+  startDate: DateTime
+  endDate: DateTime
+  classId: ID!
+  class: Class
+}
+
+type Class {
+  id: ID!
+  courseId: ID!
+  course: Course
+  teacherId: ID
+  teacher: Teacher
+  schedules: [[DateTime]]
+  startDate: DateTime
+  endDate: DateTime
+  dialInLink: String
+  isFull: Boolean
+  isWeekly: Boolean
+  isCamp: Boolean
+  series: [Class]
+  studentIds: [ID]
+  offer: Promotion
+}
+
+type Course {
+  id: ID!
+  subjectId: ID!
+  subject: Subject
+  name: String
+  info: String
+  recording: String
+  description: String
+  duration: Int
+  level: Int
+  grades: [Int]
+  price: Float
+  isTrial: Boolean
+  thumbnail: String
+  upcomingClasses(camps: Boolean): [Class]
+}
+
+type Subject {
+  id: ID!
+  name: String!
+  headline: String
+  subtitle: String
+  intro: String
+  blurb: String
+  banner: String
+  thumbnail: String
+  courses: [Course]
+  exitLevel: Int
+}
+
+type Author {
+  id: ID!
+  avatar: String
+  name: String!
+}
+
+type Comment {
+  id: ID!
+  author: Author
+  content: String!
+  createdAt: DateTime!
+}
+
+type Thread {
+  id: ID!
+  author: Author
+  content: String!
+  comments: [Comment]
+  attachments: [String]
+  createdAt: DateTime!
+}
+
+type Classroom {
+  id: ID!
+  courseId: ID!
+  course: Course
+  teacher: Teacher
+  dialInLink: String
+  startDate: DateTime
+  endDate: DateTime
+  schedules: [[DateTime]]
+  threads: [Thread]
+  students: [Student]
+}
+
+type Student {
+  id: ID!
+  name: String
+  school: String
+  gender: Gender
+  year: Int
+  age: Int
+  avatar: String
+  cover: String
+  webinar: Boolean
+  parent: User
+  enrollments: [Enrollment]
+  projects: [Project]
+  registrations(upcoming: Boolean): [Registration]
+  recommendations: [Course]
+}
+
+type Maker {
+  id: ID!
+  name: String
+  school: String
+  gender: Gender
+  year: Int
+  age: Int
+  avatar: String
+  cover: String
+  projects: [Project]
+}
+
+type User {
+  id: ID!
+  email: String!
+  braintreeToken: String
+  balanceInCents: Int
+  firstName: String
+  lastName: String
+  children: [Student]
+  timezone: String
+  refererId: ID
+  referralCode: String
+  credits: [Credit]
+  promotions: [Promotion]
+  canEnrollTrial: Boolean
+  attended: Boolean
+  paid: Boolean
+}
+
+type Referer {
+  id: ID!
+  email: String!
+  firstName: String
+  referralCode: String!
+  subjects: [Subject]
+}
+
+type Article {
+  id: ID!
+  url: String!
+  title: String
+  domain: String
+  summary: String
+  comments: String
+  image: String
+  grades: [String]
+  areas: [String]
+  createdAt: DateTime
+  published: Boolean
+}
+
+type Teacher {
+  id: ID!
+  email: String!
+  fullName: String!
+  avatar: String
+}
+
+type MonthlyStats {
+  month: Date
+  count: Int
+}
+
+type SignedUpload {
+  uploadUrl: String!
+  fileUrl: String!
+}
+
+type Partner {
+  id: ID!
+  code: String!
+  email: String!
+  name: String
+  slogan: String
+  summary: String
+  logoImage: String
+  bannerImage: String
+  courses: [Course]
+}
+
+type Query {
+  articles(offset: Int, limit: Int, selectedMonth: String): [Article]
+  articlesStats: [MonthlyStats]
+  class(id: ID!): Class
+  classroom(id: ID!, studentId: ID): Classroom
+  classes(subjectId: ID, courseId: ID): [Class]
+  rescheduleCandidates(courseId: ID!): [Class]
+  addonCandidates(courseId: ID!, idx: Int!): [Session]
+  course(id: ID!): Course
+  courses(ids: [ID]!): [Course]
+  subject(id: ID!): Subject
+  subjects(ids: [ID]): [Subject]
+  partner(id: ID, code: String): Partner
+  promotion(code: String!, courseId: ID!): Promotion
+  user: User
+  student(id: ID!): Student
+  maker(id: ID!): Maker
+  referer(code: String!): Referer
+  userUpload(name: String!, type: String!): SignedUpload
+}
+
+type Mutation {
+  signIn(email: String!, password: String!, timezone: String): User
+
+  signUp(
+    email: String!
+    password: String!
+    name: String!
+    inviter: String
+    timezone: String
+    childName: String
+    year: Int
+    classId: ID
+    campaign: String
+    source: String
+    landing: String
+  ): User
+
+  editProfile(
+    email: String
+    firstName: String
+    lastName: String
+    referralCode: String
+    password: String
+    previous: String
+    timezone: String
+  ): User
+
+  addStudent(
+    childName: String!
+    year: Int
+    school: String
+    gender: Gender
+    avatarFile: String
+  ): Student
+
+  editStudent(
+    id: ID!
+    childName: String!
+    year: Int
+    school: String
+    gender: Gender
+    avatarFile: String
+    coverFile: String
+  ): Student
+  removeStudent(id: ID!): Boolean
+
+  forgotPassword(email: String!): Boolean
+  resetPassword(email: String!, passwordResetToken: String!, password: String!): User
+
+  enrollTrial(
+    classId: ID!
+    studentId: ID!
+    webinarOptIn: Boolean
+    campaign: String
+    source: String
+  ): Enrollment
+  enrollClass(
+    classIds: [ID]!
+    studentId: ID!
+    wholePackage: Boolean
+    paymentMethodNonce: String!
+    credit: Int
+    promotionId: ID
+    campaign: String
+    source: String
+  ): [Enrollment]
+
+  cancelEnrollment(id: ID!): Boolean
+  rescheduleEnrollment(id: ID!, classId: ID!, idx: Int): Enrollment
+  inviteFriend(email: String!): Boolean
+
+  addProject(
+    published: Boolean
+    url: String!
+    preview: String!
+    title: String!
+    description: String!
+    subjectId: ID
+    studentId: ID!
+  ): Project
+
+  editProject(
+    id: ID!
+    published: Boolean
+    url: String!
+    preview: String!
+    title: String!
+    description: String!
+    subjectId: ID
+  ): Project
+
+  deleteProject(id: ID!): Boolean
+
+  addThread(
+    classId: ID!
+    studentId: ID!
+    content: String!
+    attachments: [String]
+  ): Thread
+  addProjectThread(
+    classId: ID!
+    studentId: ID!
+    url: String!
+    preview: String!
+    title: String!
+    description: String!
+    published: Boolean
+  ): Thread
+  deleteThread(id: ID!): Boolean
+  addComment(threadId: ID!, studentId: ID!, content: String!): Comment
+  deleteComment(id: ID!): Boolean
+}
+
+schema {
+  query: Query
+  mutation: Mutation
+}
