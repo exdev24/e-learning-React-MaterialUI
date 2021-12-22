@@ -38,6 +38,13 @@ type Registration {
   seats: [Seat]!
 }
 
+type Reaction {
+  id: ID!
+  content: String!
+  createdAt: DateTime!
+  user: UserPublic
+}
+
 type Project {
   id: ID!
   published: Boolean
@@ -47,6 +54,9 @@ type Project {
   description: String!
   student: Student
   subject: Subject
+  createdAt: DateTime
+  isOwner: Boolean
+  reactions: [Reaction]
 }
 
 type Enrollment {
@@ -54,6 +64,14 @@ type Enrollment {
   class: Class
   studentId: ID
   student: Student
+}
+
+type EnrollStats {
+  id: ID
+  hasEnrolled: Boolean!
+  futureTrials: Int!
+  attendedTrials: Int!
+  historical: [ID]!
 }
 
 type Credit {
@@ -84,12 +102,15 @@ type Class {
   startDate: DateTime
   endDate: DateTime
   dialInLink: String
+  password: String
   isFull: Boolean
+  seats: Int
   isWeekly: Boolean
   isCamp: Boolean
   series: [Class]
-  studentIds: [ID]
   offer: Promotion
+  hasClassroom: Boolean
+  canCancel: Boolean
 }
 
 type Course {
@@ -120,6 +141,7 @@ type Subject {
   thumbnail: String
   courses: [Course]
   exitLevel: Int
+  grades: [Int]
 }
 
 type Author {
@@ -150,11 +172,13 @@ type Classroom {
   course: Course
   teacher: Teacher
   dialInLink: String
+  zoomId: String
+  password: String
   startDate: DateTime
   endDate: DateTime
   schedules: [[DateTime]]
   threads: [Thread]
-  students: [Student]
+  viewer(studentId: ID): Author
 }
 
 type Student {
@@ -167,11 +191,14 @@ type Student {
   avatar: String
   cover: String
   webinar: Boolean
+  pe: Boolean
   parent: User
   enrollments: [Enrollment]
   projects: [Project]
   registrations(upcoming: Boolean): [Registration]
   recommendations: [Course]
+  enrolled(classId: ID!): Boolean
+  enrollStats(classId: ID!): EnrollStats
 }
 
 type Maker {
@@ -189,6 +216,7 @@ type Maker {
 type User {
   id: ID!
   email: String!
+  phoneNumber: String
   braintreeToken: String
   balanceInCents: Int
   firstName: String
@@ -199,9 +227,17 @@ type User {
   referralCode: String
   credits: [Credit]
   promotions: [Promotion]
-  canEnrollTrial: Boolean
   attended: Boolean
   paid: Boolean
+  accountChangeNotification: Boolean
+  classReminderNotification: Boolean
+  classroomActivityNotification: Boolean
+}
+
+type UserPublic {
+  id: ID!
+  firstName: String
+  lastName: String
 }
 
 type Referer {
@@ -252,6 +288,7 @@ type Partner {
   summary: String
   logoImage: String
   bannerImage: String
+  themeColor: String
   courses: [Course]
 }
 
@@ -259,7 +296,7 @@ type Query {
   articles(offset: Int, limit: Int, selectedMonth: String): [Article]
   articlesStats: [MonthlyStats]
   class(id: ID!): Class
-  classroom(id: ID!, studentId: ID): Classroom
+  classroom(id: ID!): Classroom
   classes(subjectId: ID, courseId: ID): [Class]
   rescheduleCandidates(courseId: ID!): [Class]
   addonCandidates(courseId: ID!, idx: Int!): [Session]
@@ -274,6 +311,8 @@ type Query {
   maker(id: ID!): Maker
   referer(code: String!): Referer
   userUpload(name: String!, type: String!): SignedUpload
+  project(id: ID!): Project
+  projects(offset: Int, limit: Int, subjectId: ID, featured: Boolean): [Project]
 }
 
 type Mutation {
@@ -283,6 +322,8 @@ type Mutation {
     email: String!
     password: String!
     name: String!
+    countryCode: String
+    phoneNumber: String
     inviter: String
     timezone: String
     childName: String
@@ -297,6 +338,8 @@ type Mutation {
     email: String
     firstName: String
     lastName: String
+    countryCode: String
+    phoneNumber: String
     referralCode: String
     password: String
     previous: String
@@ -328,7 +371,7 @@ type Mutation {
   enrollTrial(
     classId: ID!
     studentId: ID!
-    webinarOptIn: Boolean
+    optIn: Boolean
     campaign: String
     source: String
   ): Enrollment
@@ -356,7 +399,6 @@ type Mutation {
     subjectId: ID
     studentId: ID!
   ): Project
-
   editProject(
     id: ID!
     published: Boolean
@@ -366,8 +408,9 @@ type Mutation {
     description: String!
     subjectId: ID
   ): Project
-
   deleteProject(id: ID!): Boolean
+  addReaction(projectId: ID!, content: String!): Reaction
+  deleteReaction(id: ID!): Boolean
 
   addThread(
     classId: ID!
@@ -387,6 +430,7 @@ type Mutation {
   deleteThread(id: ID!): Boolean
   addComment(threadId: ID!, studentId: ID!, content: String!): Comment
   deleteComment(id: ID!): Boolean
+  generateCertificate(classId: ID!, studentId: ID!, studentName: String!): [Course]
 }
 
 schema {

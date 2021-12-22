@@ -1,0 +1,106 @@
+version: '3'
+services:
+  db:
+    image: mysql:5.7.19
+    ports:
+      - '3306:3306'
+    networks:
+      - dev_net
+    volumes:
+      - 'db-data:/var/lib/mysql'
+    environment:
+      MYSQL_DATABASE: "cldev"
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+    command: ['--character-set-server=utf8mb4', '--collation-server=utf8mb4_general_ci']
+
+  dev:
+    image: node:10.16
+    ports:
+      - "12800:12800"
+      - "9229:9229"
+    networks:
+      - dev_net
+    depends_on:
+      - db
+    volumes:
+      - ./:/app
+      - dev-data/:/app/node_modules
+    working_dir: /app
+    environment:
+      NODE_ENV: "docker"
+      BABEL_ENV: "development"
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+    command: make watch
+
+  ci-db:
+    image: mysql:5.7.19
+    network_mode: host
+    volumes:
+      - 'ci-db-data:/var/lib/mysql'
+    environment:
+      MYSQL_DATABASE: "cldev"
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+
+  ci:
+    image: node:10.16
+    network_mode: host
+    depends_on:
+      - ci-db
+    volumes:
+      - ./:/app
+      - ci-dev-data/:/app/node_modules
+    working_dir: /app
+    environment:
+      BABEL_ENV: "development"
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+    command: ./integration-test.sh
+
+  test-db:
+    image: mysql:5.7.19
+    ports:
+      - "3306:3306"
+    volumes:
+      - 'test-db-data:/var/lib/mysql'
+    environment:
+      MYSQL_DATABASE: "cldev"
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+
+  test:
+    image: node:10.16
+    ports:
+      - "12800:12800"
+    depends_on:
+      - test-db
+    volumes:
+      - ./:/app
+      - test-dev-data/:/app/node_modules
+    working_dir: /app
+    environment:
+      BABEL_ENV: "development"
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+    command: ./integration-test-local.sh
+
+  mailcatcher:
+    image: sj26/mailcatcher
+    ports:
+      - "1025:1025"
+      - "1080:1080"
+    networks:
+      - dev_net
+
+volumes:
+  dev-data:
+  test-dev-data:
+  ci-dev-data:
+  db-data:
+    driver: local
+  test-db-data:
+    driver: local
+  ci-db-data:
+    driver: local
+
+networks:
+  dev_net:

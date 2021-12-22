@@ -1,0 +1,53 @@
+image: yuanzong/clbuilder
+
+pipelines:
+  default:
+    - step:
+        name: Build and Test
+        caches:
+          - node
+          - nextjs
+        script:
+          - npm install
+          - npm run lint
+          - npm run typecheck
+          - npm run build
+          - ./prepare-test.sh
+          - ./integration-test.sh
+        services:
+          - test-db
+  branches:
+    master:
+      - step:
+          name: Build and Test
+          caches:
+            - node
+            - nextjs
+          script:
+            - npm install
+            - npm run lint
+            - npm run typecheck
+            - npm run build-production
+            - ./prepare-test.sh
+            - ./integration-test.sh
+          artifacts:
+            - build/**
+            - public/**
+          services:
+            - test-db
+      - step:
+          name: Deploy to staging
+          deployment: staging
+          script:
+            - ./pipeline_eb_prepare.sh
+            - ./deploy.sh
+
+definitions:
+  caches:
+    nextjs: build/app/cache
+  services:
+    test-db:
+      image: mysql:8.0
+      variables:
+        MYSQL_DATABASE: "cldev"
+        MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
